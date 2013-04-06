@@ -37,23 +37,78 @@ function find_relative_path {
     echo $RELATIVE_PATH
 }
 
-#TODO Options management (getopt)
 MAIN_TEX="main"
 GUARD_PAGE_TEX="page_garde"
 FIRST_PAGE=""
 PATTERN="00_resources"
 
-while getopts n:fF:p: flag; do
+BEAMER_MODE=0
+BEGIN='\begin{document}'
+BODY=''
+END='\end{document}'
+
+TEX_INTRO='\documentclass[a4paper,9pt]{article}
+\newcommand{\incdir}{inc/}
+\input{\incdir library}'
+
+while getopts bn:fF:p: flag; do
     case $flag in
+        b) 
+            TEX_INTRO='
+\documentclass[a4paper,10pt]{beamer}
+
+\newcommand{\incdir}{inc/}
+\newcommand{\bpresentation}{i}
+
+\input{\incdir library}
+
+\usetheme[compress]{Dresden2}
+\usecolortheme{beaver}
+\usecolortheme{seahorse}
+
+\setbeamertemplate{blocks}[rounded][shadow=true]
+
+\title[Dual approximations]{<++>}
+\author[G. Duvillié]{Guillerme Duvillié}
+\institute{Université Montpellier 2}
+
+\AtBeginSection[]{
+    \begin{frame}{Plan}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+'
+            BODY='
+\newcommand{\labelitemi}{$\bullet$}
+\newcommand{\labelitemii}{$\star$}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}
+    \frametitle{Plan}
+    \tableofcontents
+\end{frame}
+
+\addtocounter{framenumber}{-2}
+\addtobeamertemplate{footline}{\hspace{1.12\linewidth}\insertframenumber/\inserttotalframenumber}
+'
+            BEAMER_MODE=1
+            ;;
         n)
             MAIN_TEX="$OPTARG"
             ;;
         f)
-            FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            if [[ $BEAMER_MODE == 0 ]]; then
+                FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            fi
             ;;
         F)
-            GUARD_PAGE_TEX="$OPTARG"
-            FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            if [[ $BEAMER_MODE == 0 ]]; then
+                GUARD_PAGE_TEX="$OPTARG"
+                FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            fi
             ;;
         p)
             PATTERN="$OPTARG"
@@ -72,15 +127,11 @@ for i in inc pict target; do
 done
 
 # Create main.tex skeleton
-echo '\documentclass[a4paper,9pt]{article}
-
-\newcommand{\incdir}{inc/}
-
-\input{\incdir library}' > $MAIN_TEX
+echo "$TEX_INTRO" > $MAIN_TEX
 echo "$FIRST_PAGE" >> $MAIN_TEX
-echo '\begin{document}
-
-\end{document}' >> $MAIN_TEX
+echo "$BEGIN" >> $MAIN_TEX
+echo "$BODY" >> $MAIN_TEX
+echo "$END" >> $MAIN_TEX
 
 DIR=$(locate "$PATTERN" | sed '2,$d')
 PREFIX=$(find_relative_path "$DIR")

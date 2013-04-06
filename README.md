@@ -15,9 +15,11 @@ There are just a few features :
 
 ## Options
 
+* Add possibility to choose document class
 * Add possibility to init a beamer template
 * Currently the script looks for a directory containing scheduling.sty AND library.tex, it would be
   a good idea to look for a list a files specified by user
+ 
 
 ## Other
 
