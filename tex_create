@@ -1,0 +1,102 @@
+#!/bin/bash
+
+function find_relative_path {
+    ABSOLUTE_PATH=$1
+    RELATIVE_PATH=""
+    CUR_DIR=$(pwd)
+    IDEM=1
+    # Look for identical prefix for the given addresses
+    while [[ $IDEM == "1" ]]; do
+        #echo "ABSOLU : $ABSOLUTE_PATH"
+        #echo "RELATIF: $CUR_DIR"
+        #echo ""
+        # Get the first part of the path (between first and second /)
+        TMP_CDIR=$(echo "$CUR_DIR" | awk -F "/" '{print$1}')
+        TMP_ADIR=$(echo "$ABSOLUTE_PATH" | awk -F "/" '{print$1}')
+        if [[ "$TMP_CDIR" == "$TMP_ADIR" ]]; then
+            # If prefix is identical then destroy it
+            CUR_DIR=$(echo "$CUR_DIR" | awk -F "/" '{ORS="/"; for (i=2; i<=NF; i++) if($i != "") print $i}')
+            ABSOLUTE_PATH=$(echo "$ABSOLUTE_PATH" | awk -F "/" '{ORS="/"; for (i=2; i<=NF; i++) if($i != "") print $i}')
+        else
+            # Else end loop
+            IDEM=0
+        fi
+    done
+    # For any different prefix in the current work directory, we need to up the root
+    while [[ $CUR_DIR != "" ]]; do
+        #echo "CUR_DIR = $CUR_DIR"
+        CUR_DIR=$(echo "$CUR_DIR" | awk -F "/" '{ORS="/"; for (i=2; i<=NF; i++) if($i != "") print $i}')
+        RELATIVE_PATH="../$RELATIVE_PATH"
+    done
+    # Then concatenate the rest of the desired path
+    if [[ $RELATIVE_PATH != "" ]]; then
+        RELATIVE_PATH="$RELATIVE_PATH/$ABSOLUTE_PATH"
+    else
+        RELATIVE_PATH="$ABSOLUTE_PATH"
+    fi
+    echo $RELATIVE_PATH
+}
+
+#TODO Options management (getopt)
+MAIN_TEX="main"
+GUARD_PAGE_TEX="page_garde"
+FIRST_PAGE=""
+PATTERN="00_resources"
+
+while getopts n:fF:p: flag; do
+    case $flag in
+        n)
+            MAIN_TEX="$OPTARG"
+            ;;
+        f)
+            FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            ;;
+        F)
+            GUARD_PAGE_TEX="$OPTARG"
+            FIRST_PAGE='\input{\incdir '"$GUARD_PAGE_TEX"'}'
+            ;;
+        p)
+            PATTERN="$OPTARG"
+            ;;
+    esac
+done
+
+MAIN_TEX="${MAIN_TEX}.tex"
+GUARD_PAGE_TEX="${GUARD_PAGE_TEX}.tex"
+
+# Arborescence creation
+for i in inc pict target; do
+    if [[ ! -e "$i" ]]; then
+        mkdir $i
+    fi
+done
+
+# Create main.tex skeleton
+echo '\documentclass[a4paper,9pt]{article}
+
+\newcommand{\incdir}{inc/}
+
+\input{\incdir library}' > $MAIN_TEX
+echo "$FIRST_PAGE" >> $MAIN_TEX
+echo '\begin{document}
+
+\end{document}' >> $MAIN_TEX
+
+DIR=$(locate "$PATTERN" | sed '2,$d')
+PREFIX=$(find_relative_path "$DIR")
+
+for i in build.sh release.sh scheduling.sty; do
+    ln -sT "${PREFIX}/${i}" "$i"
+done
+
+# Symlink creation
+cd inc
+# TODO Let user the choice of desired directory
+DIR=$(locate "$PATTERN" | sed '2,$d')
+PREFIX=$(find_relative_path "$DIR")
+
+for i in library.tex $GUARD_PAGE_TEX; do
+    ln -sT "${PREFIX}/${i}" "$i"
+done
+
+exit 0
