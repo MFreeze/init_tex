@@ -37,6 +37,18 @@ function find_relative_path {
     echo $RELATIVE_PATH
 }
 
+function print_help {
+    echo  '
+Tex create : Initialize a tex directory
+Options :
+    * b : Initialize a beamer project
+    * n : Change name of main file
+    * f : Include First page named "page_de_garde"
+    * F : Change First Page
+    * p : Change name of researched directory containing library.tex and scheduling.sty
+'
+}
+
 MAIN_TEX="main"
 GUARD_PAGE_TEX="page_garde"
 FIRST_PAGE=""
@@ -51,8 +63,12 @@ TEX_INTRO='\documentclass[a4paper,9pt]{article}
 \newcommand{\incdir}{inc/}
 \input{\incdir library}'
 
-while getopts bn:fF:p: flag; do
+while getopts hbn:fF:p: flag; do
     case $flag in
+        h) 
+            print_help
+            exit 1        
+            ;;
         b) 
             TEX_INTRO='
 \documentclass[a4paper,10pt]{beamer}
@@ -68,7 +84,7 @@ while getopts bn:fF:p: flag; do
 
 \setbeamertemplate{blocks}[rounded][shadow=true]
 
-\title[Dual approximations]{<++>}
+\title[<++>]{<++>}
 \author[G. Duvillié]{Guillerme Duvillié}
 \institute{Université Montpellier 2}
 
@@ -112,6 +128,10 @@ while getopts bn:fF:p: flag; do
             ;;
         p)
             PATTERN="$OPTARG"
+            ;;
+        \?)
+            print_help
+            exit 1
             ;;
     esac
 done
